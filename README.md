@@ -1,4 +1,4 @@
-# primeiramente você criar um arquivo e nomea ele e depois da permisão de execução.
+# primeiramente você criar um arquivo e nomeia ele e depois da permisão de execução.
  |#bin/bash
 # Segundo você faz a verificação do apache para ver se estar instalado.
 
