@@ -1,0 +1,269 @@
+
+
+---
+
+## 🧠 Configuração de Servidor DNS com BIND9 (Local)
+
+Este guia passo a passo mostra como configurar um servidor DNS local usando **BIND9** em sistemas Linux baseados no **Debian/Ubuntu**.
+
+---
+
+### 📌 Pré-requisitos
+
+* Ubuntu ou Debian instalado
+* Acesso root ou usuário com `sudo`
+* Conexão com a internet (temporária)
+* Editor de texto como `nano`
+
+---
+
+### 🔧 Passo a Passo
+
+---
+
+#### ✅ Passo 1 – Restaurar o arquivo `/etc/hosts`
+
+```bash
+sudo nano /etc/hosts
+```
+
+Apague alterações incorretas e deixe apenas as linhas padrão, como:
+
+```text
+127.0.0.1       localhost
+127.0.1.1       nome-do-host
+```
+
+---
+
+#### ✅ Passo 2 – Atualizar repositórios
+
+```bash
+sudo apt-get update
+```
+
+---
+
+#### ✅ Passo 3 – Instalar o BIND9
+
+```bash
+sudo apt-get install bind9
+```
+
+> Pressione `S` para confirmar a instalação.
+
+---
+
+#### ✅ Passo 4 – Verificar se o BIND está rodando
+
+```bash
+sudo systemctl status bind9
+```
+
+---
+
+#### ✅ Passo 5 – Definir IP fixo na interface de rede
+
+Configure manualmente via interface gráfica ou terminal:
+
+* **IP**: `192.168.0.10`
+* **Máscara**: `255.255.255.0`
+* **Gateway**: `192.168.0.1`
+* **DNS**: `192.168.0.10`
+
+Depois aplique e reinicie a rede:
+
+```bash
+sudo systemctl restart NetworkManager
+ip a
+```
+
+---
+
+#### ✅ Passo 6 – Acessar e fazer backup da pasta BIND
+
+```bash
+cd /etc/bind
+sudo cp named.conf.local named.conf.local.bkp
+```
+
+---
+
+#### ✅ Passo 7 – Editar o arquivo `named.conf.local`
+
+```bash
+sudo nano named.conf.local
+```
+
+Conteúdo:
+
+```text
+// Zona direta
+zone "ifrn.com" {
+    type master;
+    file "/etc/bind/db.ifrn.com";
+};
+
+// Zona reversa
+zone "0.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/db.reverso10";
+};
+```
+
+---
+
+#### ✅ Passo 8 – Criar arquivos de zona
+
+```bash
+sudo cp db.local db.ifrn.com
+sudo cp db.127 db.reverso10
+```
+
+---
+
+#### ✅ Passo 9 – Editar `db.ifrn.com`
+
+```bash
+sudo nano db.ifrn.com
+```
+
+Conteúdo:
+
+```text
+;
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     ifrn.com. root.ifrn.com. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      ifrn.com.
+@       IN      A       192.168.0.10
+@       IN      AAAA    ::1
+```
+
+---
+
+#### ✅ Passo 10 – Editar `db.reverso10`
+
+```bash
+sudo nano db.reverso10
+```
+
+Conteúdo:
+
+```text
+;
+; BIND reverse data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     ifrn.com. root.ifrn.com. (
+                              1         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      ifrn.com.
+10      IN      PTR     ifrn.com.
+```
+
+---
+
+#### ✅ Passo 11 – Configurar DNS local no `resolv.conf`
+
+```bash
+sudo nano /etc/resolv.conf
+```
+
+Adicione:
+
+```text
+nameserver 192.168.0.10
+```
+
+> Dica: para evitar que o sistema sobrescreva esse arquivo:
+
+```bash
+sudo chattr +i /etc/resolv.conf
+```
+
+---
+
+#### ✅ Passo 12 – Reiniciar BIND
+
+```bash
+sudo systemctl restart bind9
+```
+
+---
+
+#### ✅ Passo 13 – Testar resolução DNS
+
+```bash
+nslookup ifrn.com
+```
+
+---
+
+#### ✅ Passo 14 – Adicionar outros hosts no DNS (opcional)
+
+```bash
+sudo nano /etc/bind/db.ifrn.com
+```
+
+Exemplo de adição:
+
+```text
+www     IN      A       192.168.0.10
+portal  IN      A       192.168.0.10
+```
+
+---
+
+#### ✅ Passo 15 – Reiniciar Apache e BIND (se necessário)
+
+```bash
+sudo systemctl restart apache2
+sudo systemctl restart bind9
+```
+
+---
+
+### ✅ Finalização
+
+Agora seu servidor DNS local deve estar funcionando corretamente e resolvendo domínios como `ifrn.com` para `192.168.0.10`.
+
+---
+
+### 🧪 Dica para Testes
+
+No navegador ou terminal de outra máquina na mesma rede:
+
+```bash
+ping ifrn.com
+```
+
+---
+
+### 🛠️ Troubleshooting
+
+* Verifique erros com:
+
+```bash
+sudo journalctl -xe
+sudo named-checkconf
+sudo named-checkzone ifrn.com /etc/bind/db.ifrn.com
+```
+
+---
+
+
+
+
+
